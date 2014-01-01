@@ -5,6 +5,7 @@
     var Rect  = require('./modula/Rect.js').Rect;
     var Grid2 = require('./modula/Grid2.js').Grid2;
     var Transform2 = require('./modula/Transform2.js').Transform2;
+    var Input = require('./modula/Input.js').Input;
 
     function extend(klass,parentklass,attrs){
         klass.prototype = Object.create(parentklass.prototype);
@@ -12,121 +13,6 @@
             klass.prototype[attr] = attrs[attr];
         }
     }
-
-    function Input(){
-        var  self = this;
-
-        this.status   = {}; // 'up' 'press' 'down' 'release' 'pressrelease'
-        this.events   = [];
-        this.node     = document.body; 
-        this.newPos   = V2();
-        this.pos      = V2();
-        this.deltaPos = V2();
-
-        this.handlerKeyup = function(event){
-            self.events.push({type:'up', key: String.fromCharCode(event.which).toLowerCase()});
-        };
-        this.handlerKeydown = function(event){
-            self.events.push({type:'down', key: String.fromCharCode(event.which).toLowerCase()});
-        };
-        this.handlerMouseup = function(event){
-            self.events.push({type:'up', key: 'mouse'+event.button}); 
-        };
-        this.handlerMousedown = function(event){
-            self.events.push({type:'down', key: 'mouse'+event.button}); 
-        };
-
-        function position(node,event){
-            var offsetX = 0;
-            var offsetY = 0;
-
-            do{
-                offsetX += node.offsetLeft;
-                offsetY += node.offsetTop;
-            }while((node = node.offsetParent));
-            
-            return V2(event.pageX - offsetX, event.pageY - offsetY);
-        }
-
-        this.handlerMousemove = function(event){
-            self.newPos = position(this,event);
-        };
-
-        this.node.addEventListener('keyup',this.handlerKeyup);
-        this.node.addEventListener('keydown',this.handlerKeydown);
-        this.node.addEventListener('mouseup',this.handlerMouseup);
-        this.node.addEventListener('mousedown',this.handlerMousedown);
-        this.node.addEventListener('mousemove',this.handlerMousemove);
-    }
-
-    Input.prototype = {
-        update: function(){
-
-            var transition = {
-                'up':'up',
-                'down':'down',
-                'press':'down',
-                'release':'up',
-                'releasepress':'down',
-                'pressrelease':'up',
-            };
-
-            for(key in this.status){
-                var previous = this.status[key] || 'up';
-                this.status[key] = transition[previous];
-            }
-
-            var uptransition = {
-                'up' :   'up',
-                'down' : 'release',
-                'press': 'pressrelease',
-                'release':'release',
-                'releasepress':'pressrelease',
-                'pressrelease':'pressrelease',
-            };
-            
-            var downtransition = {
-                'up':    'press',
-                'down':  'down',
-                'press': 'press',
-                'release':'releasepress',
-                'releasepress':'releasepress',
-                'pressrelease':'releasepress',
-            };
-
-
-            for(var i = 0, len = this.events.length; i < len; i++){
-                var e = this.events[i];
-                var previous = this.status[e.key] || 'up';
-                if(e.type === 'up'){
-                    this.status[e.key] = uptransition[this.status[e.key] || 'up'];
-                }else{ 
-                    this.status[e.key] = downtransition[this.status[e.key] || 'up'];
-                }
-            }
-            this.events = [];
-
-            this.deltaPos = this.newPos.sub(this.pos);
-            this.pos = this.newPos;
-
-        },
-        pressed: function(key){
-            var status = this.status[key] || 'up';
-            return status === 'press' || status === 'pressrelease' || status === 'releasepress';
-         },
-        down: function(key){
-            var status = this.status[key] || 'up';
-            return status === 'down' || status === 'press' || status === 'pressrelease';
-        },
-        released: function(key){
-            var status = this.status[key] || 'up';
-            return status === 'release' || status === 'pressrelease' || status === 'releasepress';
-        },
-        up: function(key){
-            var status = this.status[key] || 'up';
-            return status === 'up' || status === 'release' || status === 'releasepress';
-        },
-    };
 
     function Main(options){
         options = options || {};
@@ -692,7 +578,7 @@
 
 })(exports);
 
-},{"./modula/Grid2.js":2,"./modula/Rect.js":4,"./modula/Transform2.js":5,"./modula/V2.js":6}],2:[function(require,module,exports){
+},{"./modula/Grid2.js":2,"./modula/Input.js":3,"./modula/Rect.js":5,"./modula/Transform2.js":6,"./modula/V2.js":7}],2:[function(require,module,exports){
 
 
 /* ------ 2D Grids ----- */
@@ -1685,6 +1571,132 @@
 
 },{}],3:[function(require,module,exports){
 
+/* ------ Input Handling ----- */
+
+(function(modula){
+
+    var V2    = require('./V2.js').V2;
+    
+    function Input(){
+        var  self = this;
+
+        this.status   = {}; // 'up' 'press' 'down' 'release' 'pressrelease'
+        this.events   = [];
+        this.node     = document.body; 
+        this.newPos   = V2();
+        this.pos      = V2();
+        this.deltaPos = V2();
+
+        this.handlerKeyup = function(event){
+            self.events.push({type:'up', key: String.fromCharCode(event.which).toLowerCase()});
+        };
+        this.handlerKeydown = function(event){
+            self.events.push({type:'down', key: String.fromCharCode(event.which).toLowerCase()});
+        };
+        this.handlerMouseup = function(event){
+            self.events.push({type:'up', key: 'mouse'+event.button}); 
+        };
+        this.handlerMousedown = function(event){
+            self.events.push({type:'down', key: 'mouse'+event.button}); 
+        };
+
+        function position(node,event){
+            var offsetX = 0;
+            var offsetY = 0;
+
+            do{
+                offsetX += node.offsetLeft;
+                offsetY += node.offsetTop;
+            }while((node = node.offsetParent));
+            
+            return V2(event.pageX - offsetX, event.pageY - offsetY);
+        }
+
+        this.handlerMousemove = function(event){
+            self.newPos = position(this,event);
+        };
+
+        this.node.addEventListener('keyup',this.handlerKeyup);
+        this.node.addEventListener('keydown',this.handlerKeydown);
+        this.node.addEventListener('mouseup',this.handlerMouseup);
+        this.node.addEventListener('mousedown',this.handlerMousedown);
+        this.node.addEventListener('mousemove',this.handlerMousemove);
+    }
+
+    Input.prototype = {
+        update: function(){
+
+            var transition = {
+                'up':'up',
+                'down':'down',
+                'press':'down',
+                'release':'up',
+                'releasepress':'down',
+                'pressrelease':'up',
+            };
+
+            for(key in this.status){
+                var previous = this.status[key] || 'up';
+                this.status[key] = transition[previous];
+            }
+
+            var uptransition = {
+                'up' :   'up',
+                'down' : 'release',
+                'press': 'pressrelease',
+                'release':'release',
+                'releasepress':'pressrelease',
+                'pressrelease':'pressrelease',
+            };
+            
+            var downtransition = {
+                'up':    'press',
+                'down':  'down',
+                'press': 'press',
+                'release':'releasepress',
+                'releasepress':'releasepress',
+                'pressrelease':'releasepress',
+            };
+
+
+            for(var i = 0, len = this.events.length; i < len; i++){
+                var e = this.events[i];
+                var previous = this.status[e.key] || 'up';
+                if(e.type === 'up'){
+                    this.status[e.key] = uptransition[this.status[e.key] || 'up'];
+                }else{ 
+                    this.status[e.key] = downtransition[this.status[e.key] || 'up'];
+                }
+            }
+            this.events = [];
+
+            this.deltaPos = this.newPos.sub(this.pos);
+            this.pos = this.newPos;
+
+        },
+        pressed: function(key){
+            var status = this.status[key] || 'up';
+            return status === 'press' || status === 'pressrelease' || status === 'releasepress';
+         },
+        down: function(key){
+            var status = this.status[key] || 'up';
+            return status === 'down' || status === 'press' || status === 'pressrelease';
+        },
+        released: function(key){
+            var status = this.status[key] || 'up';
+            return status === 'release' || status === 'pressrelease' || status === 'releasepress';
+        },
+        up: function(key){
+            var status = this.status[key] || 'up';
+            return status === 'up' || status === 'release' || status === 'releasepress';
+        },
+    };
+
+    modula.Input = Input;
+})(typeof exports === 'undefined' ? ( this['modula'] || (this['modula'] = {})) : exports );
+
+},{"./V2.js":7}],4:[function(require,module,exports){
+
 /* ------ 3x3 Matrix for 2D Transformations ----- */
 
 (function(modula){
@@ -2163,7 +2175,7 @@
 
 })(typeof exports === 'undefined' ? ( this['modula'] || (this['modula'] = {})) : exports );
 
-},{"./V2.js":6}],4:[function(require,module,exports){
+},{"./V2.js":7}],5:[function(require,module,exports){
 
 /* ----- 2D Bounding Rectangle ----- */
 
@@ -2320,7 +2332,7 @@
 
 })(typeof exports === 'undefined' ? ( this['modula'] || (this['modula'] = {})) : exports );
 
-},{"./V2.js":6}],5:[function(require,module,exports){
+},{"./V2.js":7}],6:[function(require,module,exports){
 
 /* ----- 2D Scene-Graph Transforms ----- */
 
@@ -2618,7 +2630,7 @@
 
 })(typeof exports === 'undefined' ? ( this['modula'] || (this['modula'] = {})) : exports );
 
-},{"./Mat3.js":3,"./V2.js":6}],6:[function(require,module,exports){
+},{"./Mat3.js":4,"./V2.js":7}],7:[function(require,module,exports){
 
 /* ----- 2D Vectors ----- */
 
