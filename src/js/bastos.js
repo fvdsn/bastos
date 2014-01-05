@@ -120,6 +120,11 @@
             }
             this.scene.update();
             this.context.restore();
+            if(this.scene.renderHud){
+                this.context.save();
+                this.scene.renderHud();
+                this.context.restore();
+            }
         },
         mouse: function(){
             var pos = this.input.pos;
@@ -172,6 +177,13 @@
                            cy - Math.floor(sy/2),
                            sx, sy);
         },
+        text: function(cx,cy,text,font){
+            var ctx = this.main.context;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.font = font || 'normal 16px Sans';
+            ctx.fillText(text,cx,cy);
+        },
     }
 
     /* -------- PROJECTILES --------- */
@@ -206,7 +218,7 @@
             this.pos = this.pos.addScaled(this.speed,this.main.deltaTime);
             if(this.main.time > this.lifetime){
                 this.destroyed = true;
-            }else if( this.game.grid.collisionVector(  
+            }else if( this.game.world.grid.collisionVector(  
                         this.pos.x-1,this.pos.y-1,
                         this.pos.x+1,this.pos.y+1   )){
                 this.damageWall();
@@ -238,7 +250,7 @@
             }
             if(!this.stuck){
                 this.pos = this.pos.addScaled(this.speed,this.main.deltaTime);
-                if( this.game.grid.collisionVector(  
+                if( this.game.world.grid.collisionVector(  
                             this.pos.x-1,this.pos.y-1,
                             this.pos.x+1,this.pos.y+1   )){
                     this.damageWall();
@@ -359,13 +371,13 @@
     function Entity(options){
         this.main  = options.main;
         this.game  = options.main.scene;
-        this.pos   = V2();
+        this.pos   = options.pos || V2();
         this.speed = V2();
         this.health = this.maxHealth;
         this.destroyed = false;
         this.started   = false;
         if(this.radius){
-            this.sqRadius = this.radius*this.radius;
+            this.radiusSq = this.radius*this.radius;
         }
     }
 
@@ -385,11 +397,71 @@
                 grid.setCell(x,y,value);
             }
         },
+        collides: function(ent){
+            return this.pos.distSq(ent.pos) < this.radiusSq + ent.radiusSq;
+        },
         destroy: function(){
             this.destroyed = true;
         },
     };
 
+    /* -------- BONUS --------- */
+
+    function Bonus(options){
+        Entity.call(this,options);
+        this.type   = options.type || 'shield';
+        this.stat   = this.consts[this.type];
+        this.time   = this.main.time;
+        this.player = this.game.player;
+        this.energy = this.stat.energy;
+    }
+
+    extend(Bonus, Entity, {
+        radius: 12,
+        consts: {
+            lasers:{
+                lifeTime: 60,
+                energy:   100,
+                decay:      5,
+                color: '#F0F',
+                weapon: 'lasers',
+            },
+            shield:{
+                lifeTime: 60,
+                energy:   100,
+                decay:      5,
+                color: '#00F',
+            }
+        },
+        update: function(){
+            if(this.time + this.stat.lifeTime < this.main.time){
+                this.destroy();
+            }
+        },
+        activate: function(){
+            if(this.stat.weapon){
+                this.player.setWeapon(this.stat.weapon);
+            }
+        },
+        deactivate: function(){
+            if(this.stat.weapon){
+                this.player.setWeapon('default');
+            }
+        },
+        empty: function(){
+        },
+        playerUpdate: function(){
+            this.energy -= this.stat.decay * this.main.deltaTime;
+            this.energy  = Math.max(this.energy,0);
+        },
+        render: function(){
+            var r = this.main.renderer;
+            r.color(this.stat.color);
+            r.circle(0,0,this.radius * (0.8 + 0.4*Math.cos(this.main.time)));
+            r.circle(0,0,this.radius * (0.8 + 0.4*Math.cos(this.main.time*1.5+1)));
+            r.text(0,0,this.type);
+        },
+    });
 
     /* -------- PLAYER --------- */
 
@@ -400,17 +472,44 @@
             'default':new Weapon({player:this}),
             'lasers': new Lasers({player:this}),
         };
-        this.weapon = this.weapons.default;
+        this.weapon  = this.weapons.default;
+        this.bonuses = [];
+        this.activeBonus = null;
     }
 
     extend(Player,Entity,{
         radius: 10,
         maxSpeed: 150,
         wallDamage: 0.05,
-        takeDamage: function(){
-            this.game.restart();
+        winBonus: function(bonus){
+            this.game.removeBonus(bonus);
+            this.bonuses.push(bonus);
+            if(this.activeBonus){
+                this.activeBonus.deactivate();
+            }
+            this.activeBonus = bonus;
+            bonus.activate();
         },
-        damageWall:function(){
+        loseBonus: function(){
+            this.activeBonus.deactivate();
+            this.activeBonus.empty();
+            this.bonuses.pop();
+            this.activeBonus = this.bonuses[this.bonuses.length - 1];
+            if(this.activeBonus){
+                this.activeBonus.activate();
+            }
+        },
+        setWeapon:  function(weapon){
+            this.weapon = this.weapons[weapon];
+        },
+        takeDamage: function(){
+            if(this.activeBonus){
+                this.loseBonus();
+            }else{
+                this.game.restart();
+            }
+        },
+        damageWall: function(){
             var self = this;
             var grid = this.game.world.grid;
             var incx = (this.speed.x > 0) ? 1 : (this.speed.x < 0 ? -1 : 0) ;
@@ -458,12 +557,19 @@
                 this.cpos = this.cpos.lerp(apos,this.main.deltaTime*1.5);
             }
 
-            var  collision = this.game.grid.collisionVector(
+            var  collision = this.game.world.grid.collisionVector(
                                                this.pos.x - 10, this.pos.y - 10,
                                                this.pos.x + 10, this.pos.y + 10 );
 
             if(input.down('p')){
                 this.main.exit();
+            }
+
+            if(this.activeBonus && this.activeBonus.energy <= 0){
+                this.loseBonus('empty');
+            }
+            if(this.activeBonus){
+                this.activeBonus.playerUpdate();
             }
 
             this.aim = this.main.mouse().sub(this.pos).normalize();
@@ -490,6 +596,34 @@
             r.circle(0,0,this.radius);
             r.line(this.aim.x*3,this.aim.y*3,this.aim.x*18,this.aim.y*18);
 
+        },
+        renderHud: function(){
+            var ctx = this.main.context;
+            var r = this.main.renderer;
+            var w = this.main.width;
+            var h = this.main.height;
+            var cx = w/2;
+            var cy = h - 20;
+            var s = 0;
+            var S = 0;
+            var ds,dS,dW,h;
+
+            function distort(val){
+                return Math.pow(val*5,0.7);
+            }
+
+            for(var i = 0; i < this.bonuses.length; i++){
+                var bonus = this.bonuses[i];
+                s = S;
+                S += bonus.energy;
+                ctx.setFillColor(bonus.stat.color);
+                ds = distort(s) + (i > 0 ? 2 : 0);
+                dS = distort(S);
+                dW = dS - ds;
+                h  = 4;
+                ctx.fillRect(cx + ds, cy - h, dW, h);
+                ctx.fillRect(cx - ds - dW, cy - h, dW, h);
+            }
         },
     });
 
@@ -526,12 +660,12 @@
                 this.warmup  = this.main.time + 2;
             }
             if(this.mythosisTime > 0 && this.mythosisTime < this.main.time){
-                this.game.addEnemy(new Grunt({pos:this.pos})); 
+                this.game.addEnemy(new Grunt({main: this.main, pos:this.pos})); 
                 this.mythosisTime = -1;
             }
             this.pos = this.pos.addScaled(this.speed,this.main.deltaTime);
 
-            var collision = this.game.grid.collisionVector(  
+            var collision = this.game.world.grid.collisionVector(  
                         this.pos.x-this.radius,this.pos.y-this.radius,
                         this.pos.x+this.radius,this.pos.y+this.radius   );
             if(collision){
@@ -577,7 +711,7 @@
         this.speed = V2.randomDisc().setLen(this.maxSpeed);
         this.aim   = this.speed.normalize();
         this.radius = 15;
-        this.sqRadius = this.radius * this.radius;
+        this.radiusSq = this.radius * this.radius;
         this.timeout = 0;
         this.fireTime = 0;
         this.fireSequence = 1;
@@ -603,7 +737,7 @@
 
             this.pos = this.pos.addScaled(this.speed,this.main.deltaTime);
 
-            var collision = this.game.grid.collisionVector(  
+            var collision = this.game.world.grid.collisionVector(  
                         this.pos.x-this.radius,this.pos.y-this.radius,
                         this.pos.x+this.radius,this.pos.y+this.radius   );
             if(collision){
@@ -648,7 +782,6 @@
 
     function Kamikaze(options){
         Entity.call(this,options);
-        this.pos = options.pos;
         this.speed = V2.randomDisc().setLen(this.maxSpeed);
         this.timeout = 0;
         this.warmup = 0;
@@ -689,7 +822,7 @@
 
             this.pos = this.pos.addScaled(this.speed,this.main.deltaTime);
 
-            var collision = this.game.grid.collisionVector(  
+            var collision = this.game.world.grid.collisionVector(  
                         this.pos.x-this.radius,this.pos.y-this.radius,
                         this.pos.x+this.radius,this.pos.y+this.radius   );
             if(collision){
@@ -798,12 +931,11 @@
             this.player = new Player({game: this, main:this.main});
             this.playerProj = [];
             this.enemies = [];
+            this.bonuses = [];
             this.enemyProj = [];
 
             this.world  = new World().generate();
-            this.grid   = this.world.grid;
-            //this.grid.each(function(x,y,cell){ self.grid.setCell(x,y,Math.random()<0.1 ? 1 : 0)});
-            this.player.setPos(V2(this.grid.totalSizeX/2,this.grid.totalSizeY/2));
+            this.player.setPos(V2(this.world.grid.totalSizeX/2,this.world.grid.totalSizeY/2));
 
             this.enemyfreq  = 1/40;
             this.enemycount = 0;
@@ -826,6 +958,13 @@
         addEnemy: function(enemy){
             this.enemies.push(enemy);
         },
+        addBonus: function(bonus){
+            this.bonuses.push(bonus);
+        },
+        removeBonus: function(bonus){
+            var i = this.bonuses.indexOf(bonus);
+            this.bonuses.splice(i,1);
+        },
         update: function(){
 
             function clearDestroyed(list){
@@ -840,12 +979,12 @@
             }
             
             if(Math.random() < this.enemyfreq){
-                if(Math.random() < 0.1){
+                if(this.main.time > 30 && Math.random() < 0.1){
                     this.addEnemy(new Soldier({main: this.main, pos:this.player.pos.add(V2.randomDisc().scale(1000))}));
-                }else if(Math.random() < 0.2){
-                    this.addEnemy(new Grunt({main: this.main, pos:this.player.pos.add(V2.randomDisc().scale(1000))}));
+                //}else if(Math.random() < 0.1){
+                //    this.addEnemy(new Kamikaze({main: this.main, pos:this.player.pos.add(V2.randomDisc().scale(1000))}));
                 }else{
-                    this.addEnemy(new Kamikaze({main: this.main, pos:this.player.pos.add(V2.randomDisc().scale(1000))}));
+                    this.addEnemy(new Grunt({main: this.main, pos:this.player.pos.add(V2.randomDisc().scale(1000))}));
                 }
                 
                 this.enemycount++;
@@ -853,7 +992,22 @@
                     this.enemyfreq += 0.1 / this.enemycount;
                 }
             }
+            if(Math.random() < 0.002){
+                this.bonuses.push(new Bonus({main: this.main, type:'lasers', pos:this.player.pos.add(V2.randomDisc().scale(500))}));
+            }
+            var winnings = [];
+            for(var i = 0, len = this.bonuses.length; i < len; i++){
+                var bonus = this.bonuses[i];
+                    bonus.update();
+                if(bonus.collides(this.player)){
+                    winnings.push(bonus);
+                }
+            }
+            for(var i = 0, len = winnings.length; i < len; i++){
+                this.player.winBonus(winnings[i]);
+            }
             this.player.update();
+            
             for(var i = 0, len = this.enemies.length; i < len; i++){
                 this.enemies[i].update();
             }
@@ -862,7 +1016,7 @@
                     proj.update();
                 for(var j = 0, jlen = this.enemies.length; j < jlen; j++){
                     var enemy = this.enemies[j];
-                    if(proj.pos.distSq(enemy.pos) <= enemy.sqRadius){
+                    if(proj.pos.distSq(enemy.pos) <= enemy.radiusSq){
                         proj.attack(enemy);
                     }
                 }
@@ -883,6 +1037,9 @@
             if(this.mustrestart){
                 this.start();
             }
+        },
+        renderHud: function(){
+            this.player.renderHud();
         },
         render: function(){
             var self = this;
@@ -912,6 +1069,9 @@
             }
             for(var i = 0, len = this.enemies.length; i < len; i++){
                 renderEntity(this.enemies[i]);
+            }
+            for(var i = 0, len = this.bonuses.length; i < len; i++){
+                renderEntity(this.bonuses[i]);
             }
 
             var cs = this.world.cellSize;
