@@ -2,6 +2,7 @@
 /* ----- 4x4 Matrix for 3D Transforms ----- */
 
 (function(modula){
+    "use strict";
 
     var V3 = modula.V3 || (typeof 'require' !== 'undefined' ? require('V3').V3 : null);
 
@@ -10,35 +11,36 @@
     }
 
     var setArray = function(md,array,offset){
+        offset = offset || 0;
 
         // 0 4 8  12 | xx xy xz xw
         // 1 5 9  13 | yx yy yz yw
         // 2 6 10 14 | zx zy zz zw
         // 3 7 11 15 | wx wy wz ww
         
-        md.xx = array[0];
-        md.yx = array[1];
-        md.zx = array[2];
-        md.wx = array[3];
+        md.xx = array[offset+0];
+        md.yx = array[offset+1];
+        md.zx = array[offset+2];
+        md.wx = array[offset+3];
         
-        md.xy = array[4];
-        md.yy = array[5];
-        md.zy = array[6];
-        md.wy = array[7];
+        md.xy = array[offset+4];
+        md.yy = array[offset+5];
+        md.zy = array[offset+6];
+        md.wy = array[offset+7];
         
-        md.xz = array[8];
-        md.yz = array[9];
-        md.zz = array[10];
-        md.wz = array[11];
+        md.xz = array[offset+8];
+        md.yz = array[offset+9];
+        md.zz = array[offset+10];
+        md.wz = array[offset+11];
         
-        md.xw = array[12];
-        md.yw = array[13];
-        md.zw = array[14];
-        md.ww = array[15];
+        md.xw = array[offset+12];
+        md.yw = array[offset+13];
+        md.zw = array[offset+14];
+        md.ww = array[offset+15];
         return md;
     };
 
-    var set = function(md,components_){
+    var set = function(md /*, components ...*/ ){
         setArray(md,arguments,1);
         return md;
     };
@@ -81,7 +83,7 @@
             throw new Error("wrong number of arguments:"+alen);
         }
         return self;
-    };
+    }
 
     var tmp   = new Mat4();
 
@@ -97,7 +99,7 @@
 
     var epsilon  = 0.00000001;    
 
-    function epsilonEquals(a,b){  return Math.abs(a-b) <= epsilon };
+    function epsilonEquals(a,b){  return Math.abs(a-b) <= epsilon; }
 
     Mat4.equals  = function(m,n){
         return epsilonEquals(m.xx, n.xx) &&
@@ -343,18 +345,19 @@
     };
 
     proto.mult = function(arg){
+        var md,vd;
         if(typeof arg === 'number'){
-            var md = new Mat4();
+            md = new Mat4();
             Mat4.copy(md,this);
             Mat4.multFac(md,arg);
             return md;
         }else if(arg instanceof Mat4){
-            var md = new Mat4();
+            md = new Mat4();
             Mat4.copy(md,this);
             Mat4.mult(md,arg);
             return md;
         }else if(arg instanceof V3){
-            var vd = new V3();
+            vd = new V3();
             V3.copy(vd,arg);
             Mat4.multV3(vd,this);
             return vd;
@@ -399,7 +402,7 @@
 
     proto.det = function(){
         return Mat4.det(this);
-    }
+    };
 
     Mat4.invert  = function(md){
         var det = Mat4.det(md);
@@ -541,7 +544,7 @@
     };
     
     Mat4.getEulerAngles = function(vd,m){
-        vd.x = Math.atan2(m.zy,mzz);
+        vd.x = Math.atan2(m.zy,m.zz);
         vd.y = Math.atan2(-m.zx,Math.sqrt(m.zy*m.zy+m.zz*m.zz));
         vd.z = Math.atan2(m.yx,m.xx);
         return vd;
@@ -674,7 +677,7 @@
         md.yy = 2 / ( top - bottom);
         md.zz = - 2 / ( far - near );  //FIXME wikipedia says this must be negative ?
         md.xw = - ( right + left ) / ( right - left );
-        md.yw = - ( top + button ) / ( top - bottom );
+        md.yw = - ( top + bottom ) / ( top - bottom );
         md.zw = - ( far + near ) / ( far - near );
         return md;
     };
@@ -698,7 +701,7 @@
     
     Mat4.frustrum = function(l,r,b,t,n,f){
         var md = new Mat4();
-        Mat4.setFrustrum(md);
+        Mat4.setFrustrum(md,l,r,b,t,n,f);
         return md;
     };
 
@@ -748,4 +751,5 @@
         return Mat4.toArray(new Float32Array(16),this);
     };
 
-})(typeof exports === 'undefined' ? ( this['modula'] || (this['modula'] = {})) : exports );
+})(typeof exports === 'undefined' ? ( this.modula || (this.modula = {})) : exports );
+

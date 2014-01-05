@@ -2,6 +2,7 @@
 /* ------ 3x3 Matrix for 2D Transformations ----- */
 
 (function(modula){
+    "use strict";
 
     var V2 = modula.V2 || (typeof 'require' !== 'undefined' ? require('./V2.js').V2 : null);
 
@@ -28,7 +29,7 @@
         return md;
     };
 
-    var set = function(md,components_){
+    var set = function(md /*, components ... */){
         setArray(md,arguments,1);
         return md;
     };
@@ -51,14 +52,11 @@
             self.zz = 1;
         }else if (alen === 1){
             var arg = arguments[0];
-            if( typeof arg === 'string'){
-                arg = JSON.parse(arg);
-            }
             if(arg[0] !== undefined){
                 setArray(self,arg);
-            }else if(   typeof arg.rotate === 'number'
-                     || typeof arg.scale === 'number'
-                     || typeof arg.translate === 'number'){
+            }else if( typeof arg.rotate === 'number' || 
+                      typeof arg.scale === 'number'  || 
+                      typeof arg.translate === 'number' ){
                 Mat3.setTransform(self,
                         arg.translate || new V2(),
                         arg.scale|| new V2(1,1),
@@ -81,15 +79,12 @@
             throw new Error('wrong number of arguments:'+alen);
         }
         return self;
-    };
+    }
 
     modula.Mat3 = Mat3;
 
     Mat3.id       = new Mat3();
     Mat3.zero     = new Mat3(0,0,0,0,0,0,0,0,0);
-    Mat3.tmp      = new Mat3();
-    Mat3.tmp1     = new Mat3();
-    Mat3.tmp2     = new Mat3();
 
     var tmp = new Mat3();
 
@@ -97,7 +92,7 @@
 
     var epsilon = 0.00000001;
 
-    function epsilonEquals(a,b){  return Math.abs(a-b) <= epsilon };
+    function epsilonEquals(a,b){  return Math.abs(a-b) <= epsilon; }
 
     Mat3.equals  = function(m,n){
         return epsilonEquals(m.xx, n.xx) &&
@@ -222,7 +217,7 @@
         md.zz = -md.zz;
     };
 
-    proto.neg = function(mat){
+    proto.neg = function(){
         var md = new Mat3();
         Mat3.copy(md,this);
         Mat3.neg(md);
@@ -230,7 +225,7 @@
     };
 
     Mat3.tr = function(md){
-        Mat3.copy(tmp,m);
+        Mat3.copy(tmp,md);
         md.xx = tmp.xx;
         md.xy = tmp.yx;
         md.xz = tmp.zx;
@@ -292,18 +287,19 @@
     };
 
     proto.mult = function(arg){
+        var md,vd;
         if(typeof arg === 'number'){
-            var md = new Mat3();
+            md = new Mat3();
             Mat3.copy(md,this);
             Mat3.multFac(md,arg);
             return md;
         }else if(arg instanceof Mat3){
-            var md = new Mat3();
+            md = new Mat3();
             Mat3.copy(md,this);
             Mat3.mult(md,arg);
             return md;
         }else if(arg instanceof V2){
-            var vd = new V2();
+            vd = new V2();
             V2.copy(vd,arg);
             Mat3.multV2(vd,this);
             return vd;
@@ -470,9 +466,10 @@
     };
 
     proto.float32 = function(){
-        var array = Float32Array(9);
+        var array = new Float32Array(9);
         Mat3.toArray(array,this);
         return array;
     };
 
-})(typeof exports === 'undefined' ? ( this['modula'] || (this['modula'] = {})) : exports );
+})(typeof exports === 'undefined' ? ( this.modula || (this.modula = {})) : exports );
+

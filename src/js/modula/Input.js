@@ -2,6 +2,7 @@
 /* ------ Input Handling ----- */
 
 (function(modula){
+    "use strict";
 
     var V2    = require('./V2.js').V2;
     
@@ -63,9 +64,10 @@
                 'pressrelease':'up',
             };
 
-            for(key in this.status){
-                var previous = this.status[key] || 'up';
-                this.status[key] = transition[previous];
+            for(var key in this.status){
+                if(this.status.hasOwnProperty(key)){
+                    this.status[key] = transition[this.status[key] || 'up'];
+                }
             }
 
             var uptransition = {
@@ -89,13 +91,13 @@
 
             for(var i = 0, len = this.events.length; i < len; i++){
                 var e = this.events[i];
-                var previous = this.status[e.key] || 'up';
                 if(e.type === 'up'){
                     this.status[e.key] = uptransition[this.status[e.key] || 'up'];
                 }else{ 
                     this.status[e.key] = downtransition[this.status[e.key] || 'up'];
                 }
             }
+
             this.events = [];
 
             this.deltaPos = this.newPos.sub(this.pos);
@@ -121,4 +123,5 @@
     };
 
     modula.Input = Input;
-})(typeof exports === 'undefined' ? ( this['modula'] || (this['modula'] = {})) : exports );
+})(typeof exports === 'undefined' ? ( this.modula || (this.modula = {})) : exports );
+

@@ -32,6 +32,7 @@
 
     modula.Rect = Rect;
 
+    Rect.prototype._isBound = true;
     Rect.prototype.min = function(){  return new V2(this.x, this.y); };
     Rect.prototype.minX = function(){ return this.x; };
     Rect.prototype.minY = function(){ return this.y; };
@@ -41,14 +42,14 @@
     Rect.prototype.size = function(){ return new V2(this.sx, this.sy); };
     Rect.prototype.center = function(){return new V2(this.cx, this.cy); };
     Rect.prototype.equals = function(b){ return ( this.cx === b.cx && this.cy === b.cy && this.sx === b.sx && this.sy === b.sy); };
-    Rect.prototype.clone  = function(){  return new Rect(this.x,this.y,this.sx, this.sy)};
+    Rect.prototype.clone  = function(){  return new Rect(this.x,this.y,this.sx, this.sy); };
     Rect.prototype.cloneAt = function(center){ return new Rect(center.x - this.hx, center.y -this.hy, this.sx, this.sy); };
 
     //intersect line a,b with line c,d, returns null if no intersection
     function lineIntersect(a,b,c,d){
         // http://paulbourke.net/geometry/lineline2d/
         var f = ((d.y - c.y)*(b.x - a.x) - (d.x - c.x)*(b.y - a.y)); 
-        if(f == 0){
+        if(f === 0){
             return null;
         }
         f = 1 / f;
@@ -89,7 +90,7 @@
         }else if( arg instanceof Rect){
             return (arg.x >= this.x && arg.mx <= this.mx &&
                     arg.y >= this.y && arg.my <= this.my );
-        }else if(arg instanceof Bound){
+        }else if(arg._isBound){
             return (arg.minX() >= this.x && arg.maxX() <= this.mx &&
                     arg.minY() >= this.y && arg.maxY() <= this.my );
         }
@@ -105,15 +106,16 @@
     }
     
     function boundEscapeDist(amin, amax, bmin, bmax){
+        var disp;
         if(amin + amax < bmin + bmax){
-            var disp = bmin - amax;
+            disp = bmin - amax;
             if(disp >= 0){
                 return 0;
             }else{
                 return disp;
             }
         }else{
-            var disp = bmax - amin;
+            disp = bmax - amin;
             if(disp <= 0){
                 return 0;
             }else{
@@ -152,4 +154,4 @@
         return "["+this.cx+","+this.cy+"|"+this.sx+","+this.sy+"]";
     };
 
-})(typeof exports === 'undefined' ? ( this['modula'] || (this['modula'] = {})) : exports );
+})(typeof exports === 'undefined' ? ( this.modula || (this.modula = {})) : exports );

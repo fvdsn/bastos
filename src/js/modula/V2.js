@@ -2,39 +2,37 @@
 /* ----- 2D Vectors ----- */
 
 (function(modula){
+    "use strict";
     
     function V2(){
         var self = this;
-        if(this.constructor !== V2){
+        
+        if (!this || this.constructor !== V2){
             self = new V2();
         }
-    	var alen = arguments.length;      
-    	if(alen === 0){
-            self.x = 0.0;
-            self.y = 0.0;
+        
+        var alen = arguments.length;      
+        
+        if (alen === 0){
+            self.x = 0;
+            self.y = 0;
         }else if (alen === 1){
-        	var arg = arguments[0];
-        	if  (typeof arg === 'string'){
-        		arg = JSON.parse(arg);
-        	}
+            var arg = arguments[0];
             if(typeof arg === 'number'){
                 self.x = arg;
                 self.y = arg;
-            }else if(typeof arg.angle === 'number' || typeof arg.len === 'number'){
-                V2.setPolar(self, (arg.len === undefined ? 1 : arg.len), arg.angle || 0);
             }else if(arg[0] !== undefined){
                 self.x = arg[0] || 0;
                 self.y = arg[1] || 0;
             }else{
-            	self.x = arg.x || 0;
-            	self.y = arg.y || 0;
+                self.x = arg.x || 0;
+                self.y = arg.y || 0;
             }
-        }else if (alen === 2){
+        }else if (alen >= 2){
             self.x = arguments[0];
             self.y = arguments[1];
-        }else{
-            throw new Error("wrong number of arguments:"+arguments.length);
         }
+        
         return self;
     }
 
@@ -42,19 +40,17 @@
 
     var proto = V2.prototype;
     
-    V2.zero     = new V2();
-    V2.x        = new V2(1,0);
-    V2.y        = new V2(0,1);
+    V2.zero   = new V2();
+    V2.x      = new V2(1,0);
+    V2.y      = new V2(0,1);
 
-    var tmp       = new V2();
-    var tmp1      = new V2();
-    var tmp2      = new V2();
+    var tmp   = new V2();
 
     var epsilon = 0.00000001;
     
     // sets vd to a vector of length 'len' and angle 'angle' radians
     V2.setPolar = function(vd,len,angle){
-    	vd.x = len;
+        vd.x = len;
         vd.y = 0;
         V2.rotate(vd,angle);
         return vd;
@@ -66,16 +62,16 @@
         return v;
     };
 
-	V2.random = function(){
-		return new V2(Math.random()*2 - 1, Math.random()*2 - 1);
-	}
+    V2.random = function(){
+        return new V2(Math.random()*2 - 1, Math.random()*2 - 1);
+    };
 
     V2.randomPositive = function(){
         return new V2(Math.random(),Math.random());
     };
 
     V2.randomDisc = function(){
-    	var v = new V2();
+        var v = new V2();
         do{
             v.x = Math.random() * 2 - 1;
             v.y = Math.random() * 2 - 1;
@@ -138,7 +134,7 @@
     
     V2.dot = function(v1,v2){
         return v1.x*v2.x + v2.y*v2.y;
-    }
+    };
 
     proto.dot = function(v){
         return this.x*v.x + this.y*v.y;
@@ -231,7 +227,7 @@
         return vd;
     };
 
-    proto.neg = function(f){
+    proto.neg = function(){
         return new V2(-this.x,-this.y);
     };
 
@@ -453,4 +449,5 @@
         return a;
     };
 
-})(typeof exports === 'undefined' ? ( this['modula'] || (this['modula'] = {})) : exports );
+})(typeof exports === 'undefined' ? ( this.modula || (this.modula = {})) : exports );
+

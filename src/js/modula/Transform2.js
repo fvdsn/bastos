@@ -50,7 +50,7 @@
     var epsilon = 0.00000001;
 
     var epsilonEquals = function(a,b){
-        return Math.abs(a-b) <= 0.0000001;
+        return Math.abs(a-b) <= epsilon;
     };
 
     function reset_matrix(tr){
@@ -112,12 +112,12 @@
     proto.getDistantToLocalMatrix = function(dist){
         //return this.getWorldToLocalMatrix().mult(dist.getLocalToWorldMatrix());
         return dist.getLocalToWorldMatrix().mult(this.getWorldToLocalMatrix());
-    }
+    };
     
     proto.getLocalToDistantMatrix = function(dist){
         //return this.getLocalToWorldMatrix().mult(dist.getWorldToLocalMatrix());
         return dist.getWorldToLocalMatrix().mult(this.getLocalToWorldMatrix()); //FIXME looks fishy ...
-    }
+    };
     
     proto.equals = function(tr){
         return  this.fullType === tr.fullType &&
@@ -218,7 +218,7 @@
     };
     
     proto.addChild = function(tr){
-        if(tr.parent != this){
+        if(tr.parent !== this){
             tr.makeRoot();
             tr.parent = this;
             this.childs.push(tr);
@@ -293,4 +293,4 @@
         return this;
     };
 
-})(typeof exports === 'undefined' ? ( this['modula'] || (this['modula'] = {})) : exports );
+})(typeof exports === 'undefined' ? ( this.modula || (this.modula = {})) : exports );

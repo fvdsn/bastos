@@ -13,10 +13,10 @@
             self.y = 0;
             self.z = 0;
         }else if (arguments.length === 1){
-        	var arg = arguments[0];
-        	if  (typeof arg === 'string'){
-        		arg = JSON.parse(arg);
-        	}
+            var arg = arguments[0];
+            if  (typeof arg === 'string'){
+                arg = JSON.parse(arg);
+            }
             if(typeof arg === 'number'){
                 self.x = arg;
                 self.y = arg;
@@ -26,9 +26,9 @@
                 self.y = arg[1] || 0;
                 self.z = arg[2] || 0;
             }else{
-            	self.x = arg.x || 0;
-            	self.y = arg.y || 0;
-            	self.z = arg.z || 0;
+                self.x = arg.x || 0;
+                self.y = arg.y || 0;
+                self.z = arg.z || 0;
             }
         }else if (arguments.length === 3){
             self.x = arguments[0];
@@ -38,7 +38,7 @@
             throw new Error("new V3(): wrong number of arguments:"+arguments.length);
         }
         return self;
-    };
+    }
 
     V3.zero = new V3();
     V3.x    = new V3(1,0,0);
@@ -46,8 +46,6 @@
     V3.z    = new V3(0,0,1);
 
     var tmp  = new V3();
-    var tmp1 = new V3();
-    var tmp2 = new V3();
 
     var epsilon = 0.00000001;
     
@@ -130,7 +128,7 @@
     };
     
     V3.angle = function(u,v){
-        return math.acos(V3.dot(u,v)/(V3.len(u)*V3.len(v)));
+        return Math.acos(V3.dot(u,v)/(V3.len(u)*V3.len(v)));
     };
 
     proto.angle = function(v){
@@ -392,7 +390,7 @@
         vd.y = vdz*v.x - vdx*v.z;
         vd.z = vdx*v.y - vdy*v.x;
         return vd;
-    }
+    };
 
     proto.cross = function(v){
         return new V3( this.y*v.z - this.z*v.y,
@@ -432,4 +430,4 @@
         return a;
     };
 
-})(typeof exports === 'undefined' ? ( this['modula'] || (this['modula'] = {})) : exports );
+})(typeof exports === 'undefined' ? ( this.modula || (this.modula = {})) : exports );

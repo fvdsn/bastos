@@ -12,7 +12,7 @@
         return qd;
     }
     
-    function set(qd,components_){
+    function set(qd /*, components_ ... */){
         setArray(qd,arguments,1);
         return qd;
     }
@@ -22,16 +22,16 @@
         if(this.constructor !== Quat){
             self = new Quat();
         }
-    	var alen = arguments.length;      
-    	if(alen === 0){
+        var alen = arguments.length;      
+        if(alen === 0){
             self.x = 0.0;
             self.y = 0.0;
             self.z = 0.0;
             self.w = 1.0;
         }else if (alen === 1){
-        	if  (typeof arg === 'string'){
-        		arg = JSON.parse(arg);
-        	}
+            if  (typeof arg === 'string'){
+                arg = JSON.parse(arg);
+            }
             if(arg[0] !== undefined){
                 setArray(self,arg);
             }else{
@@ -87,7 +87,7 @@
     Quat.mult = function(qd,q){
         var a = Quat.copy(tmp,qd);
         var b = q;
-        if(qd == q){
+        if(qd === q){
             b = a;
         }
         qd.w = a.w*b.w - a.x*b.x - a.y*b.y - a.z*b.z;
@@ -175,7 +175,7 @@
         return qd;
     };
 
-    Quat.setRotateX = function(qd,vec,angle){
+    Quat.setRotateX = function(qd,vec,angle){ // FIXME
         qd.w = Math.cos(angle*0.5);
         qd.x = Math.sin(angle*0.5);
         qd.y = 0;
@@ -183,7 +183,7 @@
         return qd;
     };
 
-    Quat.setRotateY = function(qd,vec,angle){
+    Quat.setRotateY = function(qd,vec,angle){ // FIXME
         qd.w = Math.cos(angle*0.5);
         qd.x = 0;
         qd.y = Math.sin(angle*0.5);
@@ -191,7 +191,7 @@
         return qd;
     };
 
-    Quat.setRotateZ = function(qd,vec,angle){
+    Quat.setRotateZ = function(qd,vec,angle){ //FIXME
         qd.w = Math.cos(angle*0.5);
         qd.x = 0;
         qd.y = 0;
@@ -207,10 +207,10 @@
 
     Quat.toArray = function(array,qd,offset){
         offset = offset || 0;
-        array[offset + 0] = qd.x
-        array[offset + 1] = qd.y
-        array[offset + 2] = qd.z
-        array[offset + 3] = qd.w
+        array[offset + 0] = qd.x;
+        array[offset + 1] = qd.y;
+        array[offset + 2] = qd.z;
+        array[offset + 3] = qd.w;
         return array;
     };
 
@@ -222,4 +222,4 @@
     //    return Mat4.toArray(new Float32Array(4),this);
     //};
 
-})(typeof exports === 'undefined' ? ( this['modula'] || (this['modula'] = {})) : exports );
+})(typeof exports === 'undefined' ? ( this.modula || (this.modula = {})) : exports );

@@ -174,248 +174,6 @@
         },
     }
 
-    /* -------- ENNEMIES --------- */
-
-    function Grunt(options){
-        this.pos = options.pos;
-        this.maxSpeed = 60;
-        this.speed = V2.randomDisc().setLen(this.maxSpeed);
-        this.aim   = this.speed.normalize();
-        this.radius = 12;
-        this.sqRadius = this.radius * this.radius;
-        this.timeout = 0;
-        this.fireTime = 0;
-        this.fireInterval = 0.1;
-        this.fireSequence = 1;
-        this.projectiles = [];
-        this.warmup = 0;
-        this.mythosisTime = -1;
-    }
-
-    Grunt.prototype = {
-        damage: function(){
-            this.destroyed = true;
-            for(var i = 0; i < this.projectiles.length; i++){
-                this.projectiles[i].destroyed = true;
-            }
-        },
-        update: function(){
-            if(!this.timeout){
-                this.timeout = this.main.time + 0.5 + Math.random()*2;
-            }
-            if(!this.warmup){
-                this.warmup  = this.main.time + 2;
-            }
-            if(this.mythosisTime > 0 && this.mythosisTime < this.main.time){
-                this.game.addEnemy(new Grunt({pos:this.pos})); 
-                this.mythosisTime = -1;
-            }
-            this.pos = this.pos.addScaled(this.speed,this.main.deltaTime);
-
-            var collision = this.game.grid.collisionVector(  
-                        this.pos.x-this.radius,this.pos.y-this.radius,
-                        this.pos.x+this.radius,this.pos.y+this.radius   );
-            if(collision){
-                this.pos = this.pos.add(collision);
-            }
-            if(collision || this.timeout < this.main.time){
-                var playerbias = this.game.player.pos.sub(this.pos).setLen(0.2);
-                this.speed = V2.randomDisc().add(playerbias).setLen(this.maxSpeed);
-                this.aim   = this.speed.normalize();
-                this.timeout = this.main.time + 0.5 + Math.random()*2;
-            }
-            if(this.pos.distSq(this.game.player.pos) < 90000){
-                this.aim = this.game.player.pos.sub(this.pos).normalize();
-                if(this.warmup < this.main.time && this.fireTime < this.main.time){
-                    if(this.mythosisTime < 0){
-                        this.mythosisTime = this.main.time + 5;
-                    }
-                    var proj = new GruntProjectile(this.pos,this.aim);
-                    this.projectiles.push(proj);
-                    this.game.addEnemyProj(proj);
-                    this.fireTime = this.main.time + this.fireInterval;
-                    if(!(this.fireSequence++ % 5)){
-                        this.fireTime += 3 * this.fireInterval;
-                    }
-                }
-            }
-
-        },
-        render: function(){
-            var r = this.main.renderer;
-            r.color('red');
-            var radius = this.radius * 0.8;
-            r.circle(0,0,radius);
-            r.line( radius*this.aim.x * 0.5,
-                    radius*this.aim.y * 0.5,
-                    radius*this.aim.x * 1.5,
-                    radius*this.aim.y * 1.5);
-        },
-    };
-
-    function Soldier(options){
-        this.pos = options.pos;
-        this.maxSpeed = 60;
-        this.speed = V2.randomDisc().setLen(this.maxSpeed);
-        this.aim   = this.speed.normalize();
-        this.radius = 15;
-        this.sqRadius = this.radius * this.radius;
-        this.timeout = 0;
-        this.fireTime = 0;
-        this.fireInterval = 0.7;
-        this.fireSequence = 1;
-        this.warmup = 0;
-        this.health   = 10;
-        this.damaged = false;
-    }
-
-    Soldier.prototype = {
-        damage: function(amount){
-            this.health -= amount;
-            this.fireTime = this.main.time + this.fireInterval;
-            if(this.health <= 0){
-                this.destroyed = true;
-            }
-            this.damaged = true;
-        },
-        update: function(){
-            if(!this.timeout){
-                this.timeout = this.main.time + 0.8 + Math.random()*3;
-            }
-            if(!this.warmup){
-                this.warmup  = this.main.time + 2;
-            }
-
-            this.pos = this.pos.addScaled(this.speed,this.main.deltaTime);
-
-            var collision = this.game.grid.collisionVector(  
-                        this.pos.x-this.radius,this.pos.y-this.radius,
-                        this.pos.x+this.radius,this.pos.y+this.radius   );
-            if(collision){
-                this.pos = this.pos.add(collision);
-            }
-            if(collision || this.timeout < this.main.time){
-                var playerbias = this.game.player.pos.sub(this.pos).setLen(0.2);
-                this.speed = V2.randomDisc().add(playerbias).setLen(this.maxSpeed);
-                this.aim   = this.speed.normalize();
-                this.timeout = this.main.time + 0.8 + Math.random()*3;
-            }
-            if(this.pos.distSq(this.game.player.pos) < 250000){
-                var ppos = this.game.player.pos;
-                    ppos = ppos.addScaled(this.game.player.speed,ppos.sub(this.pos).len()/250 * (0.5+Math.random()*0.25));
-                    ppos = ppos.addScaled(V2.randomDisc(),20);
-                this.aim = ppos.sub(this.pos).normalize();
-                if(this.warmup < this.main.time && this.fireTime < this.main.time){
-                    var proj = new SoldierProjectile(this.pos,this.aim);
-                    this.game.addEnemyProj(proj);
-                    this.fireTime = this.main.time + this.fireInterval;
-                }
-            }
-
-        },
-        render: function(){
-            var r = this.main.renderer;
-            if(this.damaged){
-                this.damaged = false;
-                r.color('white');
-            }else{
-                r.color('green');
-            }
-            var radius = this.radius * 0.8;
-            r.circle(0,0,radius);
-            r.circle(0,0,radius+2);
-            r.line( radius*this.aim.x * 0.5,
-                    radius*this.aim.y * 0.5,
-                    radius*this.aim.x * 1.5,
-                    radius*this.aim.y * 1.5);
-        },
-    };
-
-    function Kamikaze(options){
-        this.pos = options.pos;
-        this.maxSpeed = 60;
-        this.chaseSpeed = 125;
-        this.accel = 20;
-        this.speed = V2.randomDisc().setLen(this.maxSpeed);
-        this.radius = 15;
-        this.sqRadius = this.radius * this.radius;
-        this.timeout = 0;
-        this.warmup = 0;
-        this.health   = 25;
-        this.damaged = false;
-        this.wallDamage = 0.035;
-    }
-
-    Kamikaze.prototype = {
-        damage: function(amount){
-            this.health -= amount;
-            this.fireTime = this.main.time + this.fireInterval;
-            this.pos = this.pos.addScaled(this.speed,this.main.deltaTime* -0.3);
-            if(this.health <= 0){
-                this.destroyed = true;
-            }
-            this.damaged = true;
-            this.chasing = false;
-        },
-        damageWall:function(){
-            var self = this;
-            var grid = this.game.world.grid;
-            grid.pixelRect( this.pos.x-this.radius, this.pos.y-this.radius,
-                            this.pos.x+this.radius, this.pos.y+this.radius,
-                function(x,y,cell){
-                    if(cell){
-                        var value = -Math.max(0,Math.abs(cell)-self.wallDamage); // flipped to indicate damage
-                        grid.setCell(x,y,value);
-                    }
-                });
-        },
-        update: function(){
-            if(!this.timeout){
-                this.timeout = this.main.time + 0.8 + Math.random()*3;
-            }
-            if(!this.warmup){
-                this.warmup  = this.main.time + 2;
-            }
-
-            this.pos = this.pos.addScaled(this.speed,this.main.deltaTime);
-
-            var collision = this.game.grid.collisionVector(  
-                        this.pos.x-this.radius,this.pos.y-this.radius,
-                        this.pos.x+this.radius,this.pos.y+this.radius   );
-            if(collision){
-                this.damageWall();
-                this.pos = this.pos.add(V2(collision).setLen(5));
-            }
-            if(!this.chasing && (collision || this.timeout < this.main.time)){
-                var playerbias = this.game.player.pos.sub(this.pos).setLen(0.2);
-                this.speed = V2.randomDisc().add(playerbias).setLen(this.maxSpeed);
-                this.timeout = this.main.time + 0.8 + Math.random()*3;
-            }
-            if(!this.chasing && this.warmup < this.main.time && this.pos.distSq(this.game.player.pos) < 150000){
-                this.chasing = true;
-            }
-            if(this.chasing){
-                this.speed = this.game.player.pos.sub(this.pos).setLen(this.chaseSpeed);
-            }
-            if(this.game.player.pos.distSq(this.pos) < 100){
-                this.game.player.damage();
-            }
-        },
-        render: function(){
-            var r = this.main.renderer;
-            if(this.damaged){
-                this.damaged = false;
-                r.color('white');
-            }else{
-                r.color('purple');
-            }
-            var radius = this.radius * 0.8;
-            r.disc(0,0,5);
-            r.circle(0,0,radius);
-            r.circle(0,0,radius+2);
-        },
-    };
-
     /* -------- PROJECTILES --------- */
 
     function Projectile(pos,dir){
@@ -433,7 +191,7 @@
         wallDamage: 0.1,
         enemyDamage: 1,
         attack: function(enemy){
-            enemy.damage(this.enemyDamage);
+            enemy.takeDamage(this.enemyDamage);
             this.destroyed = true;
         },
         damageWall:function(){
@@ -596,37 +354,61 @@
         }
     });
 
+    /* -------- ENTITY --------- */
+
+    function Entity(options){
+        this.main  = options.main;
+        this.game  = options.main.scene;
+        this.pos   = V2();
+        this.speed = V2();
+        this.health = this.maxHealth;
+        this.destroyed = false;
+        this.started   = false;
+        if(this.radius){
+            this.sqRadius = this.radius*this.radius;
+        }
+    }
+
+    Entity.prototype = {
+        maxHealth: 1,
+        takeDamage: function(damage){
+            this.health -= damage;
+            if(this.health <= 0){
+                this.destroy();
+            }
+        },
+        damageCell: function(x,y,damage){
+            var grid = this.game.world.grid;
+            var cell = grid.getCell(x,y);
+            if(cell){
+                var value = -Math.max(0,Math.abs(cell)-damage); // flipped to indicate damage
+                grid.setCell(x,y,value);
+            }
+        },
+        destroy: function(){
+            this.destroyed = true;
+        },
+    };
+
+
     /* -------- PLAYER --------- */
 
     function Player(options){
-        this.main  = options.main;
-        this.game  = options.game;
-        this.pos   = V2();
+        Entity.call(this,options);
         this.cpos  = V2();
-        this.speed = V2();
-        this.maxSpeed = 150;
-        this.fireInterval = 0.025;
-        this.fireTime     = 0;
-        this.radius = 10;
         this.weapons = {
             'default':new Weapon({player:this}),
             'lasers': new Lasers({player:this}),
         };
         this.weapon = this.weapons.default;
-        this.wallDamage = 0.05;
     }
 
-    Player.prototype = {
-        damage: function(){
+    extend(Player,Entity,{
+        radius: 10,
+        maxSpeed: 150,
+        wallDamage: 0.05,
+        takeDamage: function(){
             this.game.restart();
-        },
-        damageCell: function(x,y,amount){
-            var grid = this.game.world.grid;
-            var cell = grid.getCell(x,y);
-            if(cell){
-                var value = -Math.max(0,Math.abs(cell)-amount); // flipped to indicate damage
-                grid.setCell(x,y,value);
-            }
         },
         damageWall:function(){
             var self = this;
@@ -709,7 +491,241 @@
             r.line(this.aim.x*3,this.aim.y*3,this.aim.x*18,this.aim.y*18);
 
         },
+    });
+
+    /* -------- ENNEMIES --------- */
+
+    function Grunt(options){
+        Entity.call(this,options);
+        this.speed = V2.randomDisc().setLen(this.maxSpeed);
+        this.aim   = this.speed.normalize();
+        this.timeout = 0;
+        this.fireTime = 0;
+        this.fireSequence = 1;
+        this.projectiles = [];
+        this.warmup = 0;
+        this.mythosisTime = -1;
     }
+
+    extend(Grunt, Entity, {
+        radius: 12,
+        fireInterval: 0.1,
+        maxSpeed: 60,
+        radius: 12,
+        takeDamage: function(){
+            this.destroyed = true;
+            for(var i = 0; i < this.projectiles.length; i++){
+                this.projectiles[i].destroyed = true;
+            }
+        },
+        update: function(){
+            if(!this.timeout){
+                this.timeout = this.main.time + 0.5 + Math.random()*2;
+            }
+            if(!this.warmup){
+                this.warmup  = this.main.time + 2;
+            }
+            if(this.mythosisTime > 0 && this.mythosisTime < this.main.time){
+                this.game.addEnemy(new Grunt({pos:this.pos})); 
+                this.mythosisTime = -1;
+            }
+            this.pos = this.pos.addScaled(this.speed,this.main.deltaTime);
+
+            var collision = this.game.grid.collisionVector(  
+                        this.pos.x-this.radius,this.pos.y-this.radius,
+                        this.pos.x+this.radius,this.pos.y+this.radius   );
+            if(collision){
+                this.pos = this.pos.add(collision);
+            }
+            if(collision || this.timeout < this.main.time){
+                var playerbias = this.game.player.pos.sub(this.pos).setLen(0.2);
+                this.speed = V2.randomDisc().add(playerbias).setLen(this.maxSpeed);
+                this.aim   = this.speed.normalize();
+                this.timeout = this.main.time + 0.5 + Math.random()*2;
+            }
+            if(this.pos.distSq(this.game.player.pos) < 90000){
+                this.aim = this.game.player.pos.sub(this.pos).normalize();
+                if(this.warmup < this.main.time && this.fireTime < this.main.time){
+                    if(this.mythosisTime < 0){
+                        this.mythosisTime = this.main.time + 5;
+                    }
+                    var proj = new GruntProjectile(this.pos,this.aim);
+                    this.projectiles.push(proj);
+                    this.game.addEnemyProj(proj);
+                    this.fireTime = this.main.time + this.fireInterval;
+                    if(!(this.fireSequence++ % 5)){
+                        this.fireTime += 3 * this.fireInterval;
+                    }
+                }
+            }
+
+        },
+        render: function(){
+            var r = this.main.renderer;
+            r.color('red');
+            var radius = this.radius * 0.8;
+            r.circle(0,0,radius);
+            r.line( radius*this.aim.x * 0.5,
+                    radius*this.aim.y * 0.5,
+                    radius*this.aim.x * 1.5,
+                    radius*this.aim.y * 1.5);
+        },
+    });
+
+    function Soldier(options){
+        Entity.call(this,options);
+        this.speed = V2.randomDisc().setLen(this.maxSpeed);
+        this.aim   = this.speed.normalize();
+        this.radius = 15;
+        this.sqRadius = this.radius * this.radius;
+        this.timeout = 0;
+        this.fireTime = 0;
+        this.fireSequence = 1;
+        this.warmup = 0;
+        this.damaged = false;
+    }
+
+    extend(Soldier, Entity, {
+        maxHealth: 10,
+        maxSpeed: 60,
+        fireInterval: 0.7,
+        takeDamage: function(amount){
+            Entity.prototype.takeDamage.call(this,amount);
+            this.damaged = true;
+        },
+        update: function(){
+            if(!this.timeout){
+                this.timeout = this.main.time + 0.8 + Math.random()*3;
+            }
+            if(!this.warmup){
+                this.warmup  = this.main.time + 2;
+            }
+
+            this.pos = this.pos.addScaled(this.speed,this.main.deltaTime);
+
+            var collision = this.game.grid.collisionVector(  
+                        this.pos.x-this.radius,this.pos.y-this.radius,
+                        this.pos.x+this.radius,this.pos.y+this.radius   );
+            if(collision){
+                this.pos = this.pos.add(collision);
+            }
+            if(collision || this.timeout < this.main.time){
+                var playerbias = this.game.player.pos.sub(this.pos).setLen(0.2);
+                this.speed = V2.randomDisc().add(playerbias).setLen(this.maxSpeed);
+                this.aim   = this.speed.normalize();
+                this.timeout = this.main.time + 0.8 + Math.random()*3;
+            }
+            if(this.pos.distSq(this.game.player.pos) < 250000){
+                var ppos = this.game.player.pos;
+                    ppos = ppos.addScaled(this.game.player.speed,ppos.sub(this.pos).len()/250 * (0.5+Math.random()*0.25));
+                    ppos = ppos.addScaled(V2.randomDisc(),20);
+                this.aim = ppos.sub(this.pos).normalize();
+                if(this.warmup < this.main.time && this.fireTime < this.main.time){
+                    var proj = new SoldierProjectile(this.pos,this.aim);
+                    this.game.addEnemyProj(proj);
+                    this.fireTime = this.main.time + this.fireInterval;
+                }
+            }
+
+        },
+        render: function(){
+            var r = this.main.renderer;
+            if(this.damaged){
+                this.damaged = false;
+                r.color('white');
+            }else{
+                r.color('green');
+            }
+            var radius = this.radius * 0.8;
+            r.circle(0,0,radius);
+            r.circle(0,0,radius+2);
+            r.line( radius*this.aim.x * 0.5,
+                    radius*this.aim.y * 0.5,
+                    radius*this.aim.x * 1.5,
+                    radius*this.aim.y * 1.5);
+        },
+    });
+
+    function Kamikaze(options){
+        Entity.call(this,options);
+        this.pos = options.pos;
+        this.speed = V2.randomDisc().setLen(this.maxSpeed);
+        this.timeout = 0;
+        this.warmup = 0;
+        this.damaged = false;
+    }
+
+    extend(Kamikaze, Entity, {
+        maxHealth: 25,
+        maxSpeed: 60,
+        chaseSpeed: 125,
+        radius: 15,
+        wallDamage: 0.035,
+        takeDamage: function(amount){
+            Entity.prototype.takeDamage.call(this,amount);
+            this.fireTime = this.main.time + this.fireInterval;
+            this.pos = this.pos.addScaled(this.speed,this.main.deltaTime* -0.3);
+            this.damaged = true;
+        },
+        damageWall:function(){
+            var self = this;
+            var grid = this.game.world.grid;
+            grid.pixelRect( this.pos.x-this.radius, this.pos.y-this.radius,
+                            this.pos.x+this.radius, this.pos.y+this.radius,
+                function(x,y,cell){
+                    if(cell){
+                        var value = -Math.max(0,Math.abs(cell)-self.wallDamage); // flipped to indicate damage
+                        grid.setCell(x,y,value);
+                    }
+                });
+        },
+        update: function(){
+            if(!this.timeout){
+                this.timeout = this.main.time + 0.8 + Math.random()*3;
+            }
+            if(!this.warmup){
+                this.warmup  = this.main.time + 2;
+            }
+
+            this.pos = this.pos.addScaled(this.speed,this.main.deltaTime);
+
+            var collision = this.game.grid.collisionVector(  
+                        this.pos.x-this.radius,this.pos.y-this.radius,
+                        this.pos.x+this.radius,this.pos.y+this.radius   );
+            if(collision){
+                this.damageWall();
+                this.pos = this.pos.add(V2(collision).setLen(5));
+            }
+            if(!this.chasing && (collision || this.timeout < this.main.time)){
+                var playerbias = this.game.player.pos.sub(this.pos).setLen(0.2);
+                this.speed = V2.randomDisc().add(playerbias).setLen(this.maxSpeed);
+                this.timeout = this.main.time + 0.8 + Math.random()*3;
+            }
+            if(!this.chasing && this.warmup < this.main.time && this.pos.distSq(this.game.player.pos) < 150000){
+                this.chasing = true;
+            }
+            if(this.chasing){
+                this.speed = this.game.player.pos.sub(this.pos).setLen(this.chaseSpeed);
+            }
+            if(this.game.player.pos.distSq(this.pos) < 100){
+                this.game.player.takeDamage();
+            }
+        },
+        render: function(){
+            var r = this.main.renderer;
+            if(this.damaged){
+                this.damaged = false;
+                r.color('white');
+            }else{
+                r.color('purple');
+            }
+            var radius = this.radius * 0.8;
+            r.disc(0,0,5);
+            r.circle(0,0,radius);
+            r.circle(0,0,radius+2);
+        },
+    });
+
 
     function World(options){
         this.cellSize  = 25;
@@ -808,8 +824,6 @@
             this.enemyProj.push(proj);
         },
         addEnemy: function(enemy){
-            enemy.main = this.main;
-            enemy.game = this;
             this.enemies.push(enemy);
         },
         update: function(){
@@ -827,11 +841,11 @@
             
             if(Math.random() < this.enemyfreq){
                 if(Math.random() < 0.1){
-                    this.addEnemy(new Soldier({pos:this.player.pos.add(V2.randomDisc().scale(1000))}));
+                    this.addEnemy(new Soldier({main: this.main, pos:this.player.pos.add(V2.randomDisc().scale(1000))}));
                 }else if(Math.random() < 0.2){
-                    this.addEnemy(new Grunt({pos:this.player.pos.add(V2.randomDisc().scale(1000))}));
+                    this.addEnemy(new Grunt({main: this.main, pos:this.player.pos.add(V2.randomDisc().scale(1000))}));
                 }else{
-                    this.addEnemy(new Kamikaze({pos:this.player.pos.add(V2.randomDisc().scale(1000))}));
+                    this.addEnemy(new Kamikaze({main: this.main, pos:this.player.pos.add(V2.randomDisc().scale(1000))}));
                 }
                 
                 this.enemycount++;

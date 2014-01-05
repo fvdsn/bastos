@@ -3,6 +3,7 @@
 /* ------ 2D Grids ----- */
 
 (function(modula){
+    "use strict";
 
     /*
      * Grid2 represents a 2D Grid that can be used for physics,
@@ -37,6 +38,7 @@
         this.cells = args.cells || [];
         this.totalSizeX = this.sizeX * this.cellSizeX;
         this.totalSizeY = this.sizeY * this.cellSizeY;
+
         if(typeof args.isSolid === 'function' && args.isSolid !== Grid2.prototype.isSolid){
             this.isSolid = args.isSolid;
         }
@@ -127,7 +129,7 @@
             dist: this.dist,
             neighbors: this.neighbors,
         });
-    }
+    };
 
     // sets every cell in the grid to 'cell'
     proto.fill = function(cell){
@@ -283,9 +285,9 @@
             opts = opts || {};
         }
 
-        var dist = opts.dist 
-                 ? function(){ return opts.dist.apply(self,arguments); }
-                 : function(){ return self.dist.apply(self,arguments); }
+        var dist = opts.dist ?
+                   function(){ return opts.dist.apply(self,arguments); }
+                 : function(){ return self.dist.apply(self,arguments); };
 
         var rx = Math.ceil(r / this.cellSizeX);
         var ry = Math.ceil(r / this.cellSizeY);
@@ -311,7 +313,7 @@
             var maxY = Math.min(this.sizeY-1,y+1);
             for(var nx = minX; nx <= maxX; nx++){
                 for(var ny = minY; ny <= maxY; ny++){
-                    if(nx != x || ny !== y){
+                    if(nx !== x || ny !== y){
                         n.push({x:nx,y:ny});
                     }
                 }
@@ -439,7 +441,7 @@
                     continue;
                 }
                 var end = this.content.pop();
-                if( i === length -1){
+                if( i === len -1){
                     return end;
                 }else{
                     this.content[i] = end;
@@ -469,9 +471,10 @@
                 var child2N = ( n+1 ) * 2;
                 var child1N = child2N - 1;
                 var swap = null;
+                var child1 = null;
 
                 if(child1N < length ){ 
-                    var child1 = this.content[child1N];
+                    child1 = this.content[child1N];
                     if(child1.dist < element.dist ){
                         swap = child1N;
                     }
@@ -502,7 +505,7 @@
         while(current){
             path.push(current);
             current = came_from.get(current);
-        };
+        }
         return path.reverse();
     }
     
@@ -553,15 +556,15 @@
                 return _heuristic.call(self,start.x, start.y, end.x, end.y);
             };
 
-        var get_neighbors = opts.neighbors 
-                          ? function(x,y){ return opts.neighbors.call(self,x,y); }
-                          : ( opts.nodiags 
-                            ? function(x,y){ return self._neighborsNoDiags(x,y);} 
+        var get_neighbors = opts.neighbors ?
+                            function(x,y){ return opts.neighbors.call(self,x,y); }
+                          : ( opts.nodiags ?
+                              function(x,y){ return self._neighborsNoDiags(x,y);} 
                             : function(x,y){ return self._neighbors(x,y); }
                             );
         
-        var is_solid = opts.isSolid
-                     ? function(x,y) { return opts.isSolid.call(self,x,y); }
+        var is_solid = opts.isSolid ?
+                       function(x,y) { return opts.isSolid.call(self,x,y); }
                      : function(x,y) { return self.isSolid(x,y); };
 
         var closedset = new PointSet(this);
@@ -585,7 +588,7 @@
             for(var i = 0, len = neighbors.length; i < len; i++){
                 var neighbor = neighbors[i];
                 
-                if(this.isSolid(neighbor.x, neighbor.y) || closedset.contains(neighbor)){
+                if(is_solid(neighbor.x, neighbor.y) || closedset.contains(neighbor)){
                     continue;
                 }
 
@@ -599,10 +602,10 @@
             }
         }
         if(iterator){
-            for(var i = 0, len = result.length; i < len; i++){
-                var r = result[i]
+            for(var j = 0, jlen = result.length; j < jlen; j++){
+                var r = result[j];
                     r.cell = this.getCellUnsafe(r.x,r.y);
-                iterator.call(this,r.x,r.y,r.cell,i,len);
+                iterator.call(this,r.x,r.y,r.cell,j,jlen);
             }
         }
         return result;
@@ -624,20 +627,21 @@
         var maxy = by+bsy;
         var iRx = 1.0/Rx;
         var iRy = 1.0/Ry;
+        var tminx, tmaxx, tminy, tmaxy;
 
         if( iRx >= 0 ){
-            var tminx = ( minx - Ox) * iRx;
-            var tmaxx = ( maxx - Ox) * iRx;
+            tminx = ( minx - Ox) * iRx;
+            tmaxx = ( maxx - Ox) * iRx;
         }else{
-            var tminx = ( maxx - Ox) * iRx;
-            var tmaxx = ( minx - Ox) * iRx;
+            tminx = ( maxx - Ox) * iRx;
+            tmaxx = ( minx - Ox) * iRx;
         }
         if( iRy >= 0 ){
-            var tminy = ( miny - Oy) * iRy;
-            var tmaxy = ( maxy - Oy) * iRy;
+            tminy = ( miny - Oy) * iRy;
+            tmaxy = ( maxy - Oy) * iRy;
         }else{
-            var tminy = ( maxy - Oy) * iRy;
-            var tmaxy = ( miny - Oy) * iRy;
+            tminy = ( maxy - Oy) * iRy;
+            tmaxy = ( miny - Oy) * iRy;
         }
         if( tminx > tmaxy || tminy > tmaxx ){
             return undefined;
@@ -662,7 +666,7 @@
 
     proto.rayIntersectCell = function(startX,startY,dirX,dirY,cellX,cellY){
         return rayIntersectBox(startX,startY,dirX,dirY,cellX*this.cellSizeX,cellY*this.cellSizeY,this.cellSizeX,this.cellSizeY);
-    }
+    };
 
     // iterates over the grid's cells containing the ray starting at
     // pixel (startX,starty) in the direction (dirX,dirY) in the order
@@ -678,7 +682,7 @@
         // http://www.xnawiki.com/index.php?title=Voxel_traversal
 
         if(!this.pixelInside(startX,startY)){
-            start = rayIntersectBox(startX,startY,dirX,dirY,0,0,this.cellSizeX*this.sizeX, this.cellSizeY*this.sizeY);
+            var start = rayIntersectBox(startX,startY,dirX,dirY,0,0,this.cellSizeX*this.sizeX, this.cellSizeY*this.sizeY);
             if(!start){
                 return;
             }
@@ -757,8 +761,6 @@
 
         var sx    = maxX - minX;
         var sy    = maxY - minY;
-        var px    = minX + sx/2.0;
-        var py    = minY + sy/2.0;
  
         var cx    = this.sizeX;
         var cy    = this.sizeY;
@@ -769,8 +771,8 @@
             return;
         }
 
-        var is_solid  = opts.isSolid 
-                      ? function(x,y){ return opts.solidity.call(this,x,y); }
+        var is_solid  = opts.isSolid ?
+                        function(x,y){ return opts.solidity.call(this,x,y); }
                       : function(x,y){ return self.isSolid(x,y); };
 
         //we transform everything so that the cells are squares of size 1.
@@ -781,7 +783,7 @@
         minX *= isx;
         minY *= isy;
         maxX *= isx;
-        maxY *= isy
+        maxY *= isy;
 
         var min_px = Math.floor(minX);
         var max_px = Math.floor(maxX);
@@ -796,14 +798,15 @@
         var esc_u = (min_py + 1 - minY) * csy;
         var esc_d = -( maxY - max_py )  * csy;
 
+        var dx = 0, dy = 0;
 
         // at this point we are back in world sizes 
 
         if(min_px === max_px && min_py === max_py){
             // in the middle of one block
             if(is_solid(min_px,min_py)){
-                var dx = esc_l < -esc_r ? esc_l : esc_r;
-                var dy = esc_u < -esc_d ? esc_u : esc_d;
+                dx = esc_l < -esc_r ? esc_l : esc_r;
+                dy = esc_u < -esc_d ? esc_u : esc_d;
                 if(Math.abs(dx) < Math.abs(dy)){
                     return {x:dx, y:0};
                 }else{
@@ -848,7 +851,6 @@
             if(count === 0){
                 return undefined;
             }else if(count === 4){
-                var dx = 0, dy = 0;
                 if( -esc_r < esc_l){
                     dx = esc_r - csx;
                 }else{
@@ -865,8 +867,6 @@
                     return {x:0, y:dy};
                 }
             }else if(count >= 2){
-                var dx = 0;
-                var dy = 0;
                 if(solid_ul && solid_ur){
                     dy = esc_u;
                 }
@@ -882,10 +882,10 @@
                 if(count === 2){
                     // center of the bound relative to the center of the 4
                     // cells. cy goes up
-                    var sx = esc_l - esc_r;
-                    var sy = esc_u - esc_d;
-                    var cx = -esc_r - sx*0.5;
-                    var cy = -(-esc_d - sy*0.5);
+                    sx = esc_l - esc_r;
+                    sy = esc_u - esc_d;
+                    cx = -esc_r - sx*0.5;
+                    cy = -(-esc_d - sy*0.5);
 
                     if(solid_dr && solid_ul){
                         // XXXX
@@ -928,62 +928,5 @@
         }
     };
 
-    /*
-    modula.$Grid2 = function $Grid2(selector,x,y,size){
-        var  self = this;
-        this.grid = new modula.Grid2(x,y,{
-            cellSizeX:size,
-            cellSizeY:size,
-            isSolid: function(x,y){
-                var cell = this.getCell(x,y);
-                return cell && cell.hasClass('solid');
-            }
-        });
-        this.grid.map(function(x,y){
-            var $cell = $("<div class='cell'></div>");
-            $cell.css({
-                'float':  'left',
-                'width':  size+'px',
-                'height': size+'px',
-                'text-align':'center',
-                'font-size': size/4+'px',
-                'line-height': size+'px',
-                'color':'gray',
-                'border': 'solid 1px gray',
-                'box-sizing': 'border-box',
-            });
-            $cell.data('grid',self);
-            $cell.data('x',x);
-            $cell.data('y',y);
-            $cell.appendTo(selector);
-            $cell.click(function(){
-                if( self.grid.isSolid(x,y) ){
-                    self.setVoid(x,y);
-                }else{
-                    self.setSolid(x,y);
-                }
-            });
-            $cell.setVoid = function(){ self.setVoid(x,y); };
-            $cell.setSolid = function(){ self.setSolid(x,y); };
-
-            return $cell;
-        });
-        $(selector).css({
-            'overflow':'hidden',
-            'width': this.grid.totalSizeX + 'px',
-            'height': this.grid.totalSizeY + 'py',
-        });
-        this.setSolid = function(x,y){
-            this.grid.getCell(x,y).addClass('solid').css({'background':'black'});
-        };
-        this.setVoid = function(x,y){
-            this.grid.getCell(x,y).removeClass('solid').css({'background':'white'});
-        };
-    };*/
-
-})(typeof exports === 'undefined' ? ( this['modula'] || (this['modula'] = {})) : exports );
-
-
-
-
+})(typeof exports === 'undefined' ? ( this.modula || (this.modula = {})) : exports );
 
